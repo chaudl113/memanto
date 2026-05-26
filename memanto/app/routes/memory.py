@@ -30,8 +30,11 @@ from memanto.app.services.memory_write_service import MemoryWriteService
 from memanto.app.utils.errors import map_error_to_http_exception
 from memanto.app.utils.validation import CostGuard
 from memanto.cli.client.direct_client import DirectClient
+from memanto.cli.config.manager import ConfigManager
 
 router = APIRouter()
+
+_config_manager = ConfigManager()
 
 
 class RecallRequest(BaseModel):
@@ -393,7 +396,17 @@ async def recall(
             )
         )
 
-    limit = request.limit if request.limit is not None else settings.RECALL_LIMIT
+    recall_cfg = _config_manager.get_recall_config()
+    limit = (
+        request.limit
+        if request.limit is not None
+        else recall_cfg.get("limit", settings.RECALL_LIMIT)
+    )
+    min_similarity = (
+        request.min_similarity
+        if request.min_similarity is not None
+        else recall_cfg.get("min_similarity")
+    )
     CostGuard.validate_k_limit(limit)
 
     try:
@@ -407,7 +420,7 @@ async def recall(
             scope_type="agent",
             scope_id=agent_id,
             type=request.type,
-            min_similarity_score=request.min_similarity,
+            min_similarity_score=min_similarity,
             limit=limit,
         )
 

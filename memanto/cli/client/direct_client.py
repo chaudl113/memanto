@@ -755,8 +755,10 @@ class DirectClient:
             Dict with ``agent_id``, ``query``, ``memories`` (list),
             ``count``.
         """
+        recall_cfg = ConfigManager().get_recall_config()
         if limit is None:
-            limit = ConfigManager().get_recall_config()["limit"]
+            limit = recall_cfg["limit"]
+        min_similarity = recall_cfg.get("min_similarity")
 
         # Ensure there is a valid, non-expired session for this agent
         self._get_validated_session_for_agent(agent_id)
@@ -773,6 +775,7 @@ class DirectClient:
             type=type,
             tags=tags,
             min_confidence=min_confidence,
+            min_similarity_score=min_similarity,
             created_after=created_after.isoformat() if created_after else None,
             created_before=created_before.isoformat() if created_before else None,
             limit=limit,
