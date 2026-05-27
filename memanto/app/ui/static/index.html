@@ -1695,6 +1695,7 @@
         // PLAYGROUND - UPLOAD FILE
         // ================================================================
         const UPLOAD_EXTENSIONS = ['.pdf', '.docx', '.xlsx', '.json', '.txt', '.csv', '.md'];
+        const MAX_UPLOAD_BYTES = 5 * 1024 * 1024 * 1024; // 5GB — mirrors the backend/SDK limit
 
         async function doUpload() {
             if (!S.agentId || !S.token) { toast('No active agent/session. Activate an agent first.', 'error'); return; }
@@ -1704,6 +1705,10 @@
             const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')).toLowerCase() : '';
             if (!UPLOAD_EXTENSIONS.includes(ext)) {
                 toast(`Unsupported file type "${ext}". Allowed: ${UPLOAD_EXTENSIONS.join(', ')}`, 'error');
+                return;
+            }
+            if (file.size > MAX_UPLOAD_BYTES) {
+                toast('File exceeds the 5GB upload limit', 'error');
                 return;
             }
 
@@ -1726,6 +1731,10 @@
                     let msg = data.detail || res.statusText;
                     if (typeof msg === 'object') msg = JSON.stringify(msg);
                     throw new Error(msg);
+                }
+                // Backend can return HTTP 200 with status:"failed" if Moorcheh rejects the file.
+                if (data.status !== 'uploaded') {
+                    throw new Error(data.message || `Upload failed with status "${data.status || 'unknown'}"`);
                 }
                 toast(`Uploaded "${data.file_name}" to ${data.agent_id}`);
                 out.innerHTML = `<p style="color:var(--success)">✓ ${escHtml(data.file_name)} (${data.status})${data.message ? ' — ' + escHtml(data.message) : ''}</p>`;
